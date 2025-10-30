@@ -1,49 +1,62 @@
 <!--
-# SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: 2025 The Linux Foundation
+SPDX-License-Identifier: Apache-2.0
+SPDX-FileCopyrightText: 2025 The Linux Foundation
 -->
 
-# 🛠️ Template Action
+# 🎟️ Add issue tracker to commit message body
 
-This is a template for the other actions in this Github organisation.
+Action to add an issue tracker reference to the body of a commit message.
 
-## actions-template
+## inject-issue-id-action
 
 ## Usage Example
 
-<!-- markdownlint-disable MD046 -->
+Pass a JSON key/value lookup table to the action, either directly as a string,
+or by passing in the contents of a variable (set either at the repository or
+organisation level).
 
 ```yaml
-steps:
-  - name: "Action template"
-    id: action-template
-    uses: lfreleng-actions/actions-template@main
-    with:
-      input: "placeholder"
+- name: "Check/Add commit message issue tracker reference"
+  uses: lfit/releng-reusable-workflows/.github/actions/inject-issue-id-action@main
+  with:
+      issue_id_lookup_json: ${{ vars.ISSUE_ID_LOOKUP_JSON }}
 ```
 
-<!-- markdownlint-enable MD046 -->
+In the example above, the repository passes in the JSON data contained in
+a variable configured called ISSUE_ID_LOOKUP_JSON.
+
+Set/define this for the repository under:
+
+GitHub Repository -> Settings -> Secrets and variables -> Actions -> Variables
 
 ## Inputs
 
+issue_id_lookup_json is mandatory; issue_string and inject are optional
+with default values.
+
 <!-- markdownlint-disable MD013 -->
 
-| Name          | Required | Description  |
-| ------------- | -------- | ------------ |
-| input         | False    | Action input |
+| Variable Name        | Required | Default     | Description                           |
+| -------------------- | -------- | ----------- | ------------------------------------- |
+| issue_id_lookup_json | True     | N/A         | JSON object of key/value pairs        |
+| issue_string         | False    | "Issue-ID:" | Fixed preamble/string to embed/inject |
+| inject               | False    | True        | When set false, checks for presence   |
 
 <!-- markdownlint-enable MD013 -->
 
 ## Outputs
 
-<!-- markdownlint-disable MD013 -->
+| Variable Name | Description                                   |
+| ------------- | --------------------------------------------- |
+| present       | Set true when ticket string found or injected |
 
-| Name          | Description   |
-| ------------- | ------------- |
-| output        | Action output |
+## Limitations
 
-<!-- markdownlint-enable MD013 -->
+This action uses `${{ github.actor }}` as the key to lookup, but also
+reports the `${{ github.actor_id }}`, which is a GitHub facsimile to
+the UNIX concept of a UID value.
 
-## Implementation Details
+## Future Enhancements
 
-## Notes
+It may be desirable to use other GitHub parameters as keys in the JSON
+value/lookup.
