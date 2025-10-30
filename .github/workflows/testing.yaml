@@ -3,15 +3,15 @@
 # SPDX-FileCopyrightText: 2025 The Linux Foundation
 
 # Action test/validation workflow
-name: "Test GitHub Action 🧪"
+name: 'Test GitHub Action 🧪'
 
 # yamllint disable-line rule:truthy
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
+    branches: ['main']
   pull_request:
-    branches: ["main"]
+    branches: ['main']
 
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
@@ -20,13 +20,12 @@ concurrency:
 permissions: {}
 
 jobs:
-  ### Test the GitHub Action in this Repository ###
-  tests:
-    name: "Test local GitHub Action"
+  test-issue-detection:
+    name: 'Test issue tracker detection'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-    timeout-minutes: 10 # Increase this timeout value as needed
+      contents: write
+    timeout-minutes: 10
     steps:
       # Harden the runner used by this workflow
       # yamllint disable-line rule:line-length
@@ -34,42 +33,193 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: "Checkout repository"
+      - name: 'Checkout repository'
+        # yamllint disable-line rule:line-length
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      # Perform setup prior to running test(s)
-      - name: "Testing setup step"
-        shell: bash
-        run: |
-          # Testing setup step
-          echo "Testing setup step"
-          echo "Testing setup step/summary output" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: "Running local action: ${{ github.repository }}"
-        uses: ./
         with:
-          input: "test input 💬"
+          fetch-depth: 0
 
-      - name: "Validated local action: ${{ github.repository }}"
-        shell: bash
+      - name: 'Setup test commit with issue tracker'
         run: |
-          # Local action validation
-          echo "Validated local action: ${{ github.repository }}"
-          echo "Validation step summary output" >> "$GITHUB_STEP_SUMMARY"
+          git config user.name 'GitHub Actions Test'
+          git config user.email 'actions@github.com'
+          echo '# Test Documentation' > test-detection.md
+          git add test-detection.md
+          git commit -m "docs: Add test documentation
 
-      # yamllint disable-line rule:line-length
-      - name: "Running local action: ${{ github.repository }} [Override Failure]"
+          This commit includes an issue tracker reference.
+
+          Issue-ID: TEST-456"
+
+      - name: 'Test detection of existing issue tracker'
         uses: ./
-        id: failure
+        id: test-detection
+        with:
+          issue_id_lookup_json: >-
+            {
+              "${{ github.actor }}": "FALLBACK-001",
+              "dependabot[bot]": "MAINT-001"
+            }
+          inject: false
+
+      - name: 'Verify issue tracker was detected'
+        run: |
+          if [ "${{ steps.test-detection.outputs.present }}" != "true" ]; then
+            echo '❌ Failed to detect existing issue tracker'
+            exit 1
+          fi
+          echo '✅ Issue tracker detection test passed'
+
+  test-custom-string:
+    name: 'Test custom issue string'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 10
+    steps:
+      # Harden the runner used by this workflow
+      # yamllint disable-line rule:line-length
+      - uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
+      - name: 'Checkout repository'
+        # yamllint disable-line rule:line-length
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: 'Setup test commit with custom issue format'
+        run: |
+          git config user.name 'GitHub Actions Test'
+          git config user.email 'actions@github.com'
+          echo '# Custom Format Test' > test-custom.md
+          git add test-custom.md
+          git commit -m "feat: Add custom format support
+
+          This commit uses a custom issue tracker format.
+
+          Ticket-ID: CUSTOM-789"
+
+      - name: 'Test custom issue string detection'
+        uses: ./
+        id: test-custom
+        with:
+          issue_id_lookup_json: '{"test": "FALLBACK-999"}'
+          issue_string: 'Ticket-ID:'
+          inject: false
+
+      - name: 'Verify custom string was detected'
+        run: |
+          if [ "${{ steps.test-custom.outputs.present }}" != "true" ]; then
+            echo '❌ Failed to detect custom issue string format'
+            exit 1
+          fi
+          echo '✅ Custom issue string test passed'
+
+  test-missing-issue:
+    name: 'Test missing issue handling'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 10
+    steps:
+      # Harden the runner used by this workflow
+      # yamllint disable-line rule:line-length
+      - uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
+      - name: 'Checkout repository'
+        # yamllint disable-line rule:line-length
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: 'Setup test commit without issue tracker'
+        run: |
+          git config user.name 'GitHub Actions Test'
+          git config user.email 'actions@github.com'
+          echo '# No Issue Test' > test-no-issue.md
+          git add test-no-issue.md
+          git commit -m "fix: Update configuration
+
+          This commit does not include an issue tracker reference."
+
+      - name: 'Test missing issue detection (check mode)'
+        uses: ./
+        id: test-missing
+        with:
+          issue_id_lookup_json: >-
+            {
+              "${{ github.actor }}": "FOUND-123",
+              "test-user": "TEST-456"
+            }
+          inject: false
+
+      - name: 'Verify missing issue was detected'
+        run: |
+          if [ "${{ steps.test-missing.outputs.present }}" == 'true' ]; then
+            echo '❌ Should not have found issue tracker'
+            exit 1
+          fi
+          echo '✅ Missing issue detection test passed'
+
+  test-error-handling:
+    name: 'Test error scenarios'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 10
+    steps:
+      # Harden the runner used by this workflow
+      # yamllint disable-line rule:line-length
+      - uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
+      - name: 'Checkout repository'
+        # yamllint disable-line rule:line-length
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: 'Setup test commit for error testing'
+        run: |
+          git config user.name 'GitHub Actions Test'
+          git config user.email 'actions@github.com'
+          echo '# Error Test' > test-error.md
+          git add test-error.md
+          git commit -m 'test: Error handling scenario'
+
+      - name: 'Test with invalid JSON'
+        uses: ./
+        id: test-invalid-json
         continue-on-error: true
         with:
-          invalid_input: "Some garbage"
+          issue_id_lookup_json: 'invalid json format here'
+          inject: true
 
-      # Failure testing is also important
-      - name: "Error if step above did NOT fail"
-        if: steps.failure.outcome == 'success'
-        shell: bash
+      - name: 'Verify invalid JSON was handled'
         run: |
-          # Error if step above did NOT fail
-          echo "Error: previous test step did NOT fail ❌"
-          exit 1
+          if [ "${{ steps.test-invalid-json.outcome }}" == 'success' ]; then
+            echo '❌ Should have failed with invalid JSON'
+            exit 1
+          fi
+          echo '✅ Invalid JSON handling test passed'
+
+      - name: 'Test successful scenario for comparison'
+        uses: ./
+        id: test-valid
+        with:
+          issue_id_lookup_json: '{"valid": "TEST-000"}'
+          inject: false
+
+      - name: 'Verify valid input works'
+        run: |
+          if [ "${{ steps.test-valid.outcome }}" != 'success' ]; then
+            echo '❌ Valid input should have succeeded'
+            exit 1
+          fi
+          echo '✅ Valid input test passed'
+          echo '✅ All error handling tests completed'
