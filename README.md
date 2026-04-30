@@ -15,12 +15,16 @@ Pass a JSON key/value lookup table to the action, either directly as a string,
 or by passing in the contents of a variable (set either at the repository or
 organisation level).
 
+<!-- markdownlint-disable MD013 -->
+
 ```yaml
 - name: "Check/Add commit message issue tracker reference"
-  uses: lfit/releng-reusable-workflows/.github/actions/inject-issue-id-action@main
+  uses: lfreleng-actions/inject-issue-id-action@689ff3a7fd1ddf8f462b1ef695d4851aaf9758b3 # v0.1.1
   with:
-      issue_id_lookup_json: ${{ vars.ISSUE_ID_LOOKUP_JSON }}
+    issue_id_lookup_json: ${{ vars.ISSUE_ID_LOOKUP_JSON }}
 ```
+
+<!-- markdownlint-enable MD013 -->
 
 In the example above, the repository passes in the JSON data contained in
 a variable configured called ISSUE_ID_LOOKUP_JSON.
