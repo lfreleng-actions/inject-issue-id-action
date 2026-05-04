@@ -72,7 +72,7 @@ runs:
 
     - name: 'Configure GIT user for commit'
       if: env.PRESENT == 'false' && inputs.inject == 'true'
-      uses: lfreleng-actions/git-configure-action@8bb0e2fccf6674a4e38266ad729330f21930cc75 # v0.1.0
+      uses: lfreleng-actions/git-configure-action@0e0eb0c79709d98729770e412bc2fd588cacd05a # v0.1.0
 
     - name: 'Adding issue tracker to commit message'
       id: inject
