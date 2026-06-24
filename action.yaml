@@ -31,19 +31,22 @@ runs:
     - name: 'Get GIT commit message body'
       id: commit-message
       # yamllint disable rule:line-length
-      uses: lfreleng-actions/git-commit-message-action@c1740ca14a10e815de65f439f539f9f9cbb7bcd8 # v0.1.0
+      uses: lfreleng-actions/git-commit-message-action@4a5b845bd35d9363a8ab59824d374d1b2967666e # v0.1.1
 
     - name: 'Check commit message for issue tracker reference'
       shell: bash
+      env:
+        STEP_COMMIT_MESSAGE: ${{ steps.commit-message.outputs.commit_message }}
+        INPUT_ISSUE_STRING: ${{ inputs.issue_string }}
       run: |
         # Check commit message for issue tracker reference
         echo "# Checking Commit Message for Issue Tracker" >> "$GITHUB_STEP_SUMMARY"
 
-        COMMIT_MESSAGE="${{ env.commit_message }}"
+        COMMIT_MESSAGE="$STEP_COMMIT_MESSAGE"
         if [ -z "$COMMIT_MESSAGE" ]; then
           echo 'Commit message body was empty/unpopulated ❌'; exit 1
         fi
-        if [[ "$COMMIT_MESSAGE" =~ "${{ inputs.issue_string }}" ]]; then
+        if [[ "$COMMIT_MESSAGE" =~ "$INPUT_ISSUE_STRING" ]]; then
           echo 'Issue tracker found in pull request ✅' >> "$GITHUB_STEP_SUMMARY"
           echo 'Issue tracker found in pull request ✅'
           echo 'PRESENT=true' >> "$GITHUB_ENV"
@@ -54,21 +57,26 @@ runs:
         fi
 
     - name: 'Set key to use for JSON lookup'
+      id: set-key
       if: env.PRESENT == 'false' && inputs.inject == 'true'
       shell: bash
+      env:
+        GH_ACTOR: ${{ github.actor }}
+        GH_ACTOR_ID: ${{ github.actor_id }}
       run: |
         # Set key to use for JSON lookup
-        ACTOR="${{ github.actor }}"
-        ACTOR_ID="${{ github.actor_id }}"
+        ACTOR="$GH_ACTOR"
+        ACTOR_ID="$GH_ACTOR_ID"
         echo "Using GitHub actor as lookup key: $ACTOR [$ACTOR_ID] 🔑"
-        echo "key=$ACTOR" >> "$GITHUB_ENV"
+        echo "key=$ACTOR" >> "$GITHUB_OUTPUT"
 
     - name: 'Get ticket from JSON lookup table'
+      id: lookup
       if: env.PRESENT == 'false' && inputs.inject == 'true'
-      uses: lfreleng-actions/json-key-value-lookup-action@ed95008d49173ba450865d6c8faad0aabf07a39c # v0.1.0
+      uses: lfreleng-actions/json-key-value-lookup-action@6622b1017699e557a76c8d041cfb7378160424c9 # v0.1.2
       with:
         json: ${{ inputs.issue_id_lookup_json }}
-        key: ${{ env.key }}
+        key: ${{ steps.set-key.outputs.key }}
 
     - name: 'Configure GIT user for commit'
       if: env.PRESENT == 'false' && inputs.inject == 'true'
@@ -79,22 +87,28 @@ runs:
       # yamllint disable-line rule:line-length
       if: env.PRESENT == 'false' && inputs.inject == 'true' && (github.event.pull_request.head.ref != github.ref_name) && (github.event.pull_request.head.ref != github.event.pull_request.base.ref)
       shell: bash
+      env:
+        INPUT_ISSUE_STRING: ${{ inputs.issue_string }}
+        STEP_VALUE: ${{ steps.lookup.outputs.value }}
       run: |
         # Adding issue tracker reference to commit message
-        git commit --amend --trailer "${{ inputs.issue_string }} ${{ env.value }}" --no-verify --no-edit
+        git commit --amend --trailer "$INPUT_ISSUE_STRING $STEP_VALUE" --no-verify --no-edit
         echo "Performing force push on pull request ⚠️"
         git push --force
         echo "present=true" >> "$GITHUB_ENV"
-        echo "Added issue tracker reference: ${{ env.value }} 🎟️"
-        echo "### 🎟️ Added issue tracker reference: ${{ env.value }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "Added issue tracker reference: $STEP_VALUE 🎟️"
+        echo "### 🎟️ Added issue tracker reference: $STEP_VALUE" >> "$GITHUB_STEP_SUMMARY"
 
     - name: 'Set status/outputs'
       id: status
       shell: bash
+      env:
+        ENV_PRESENT_LOWER: ${{ env.present }}
+        ENV_PRESENT_UPPER: ${{ env.PRESENT }}
       run: |
         # Set status/outputs
-        if [ -n "${{ env.present }}" ]; then
-          echo "present=${{ env.present }}" >> "$GITHUB_OUTPUT"
+        if [ -n "$ENV_PRESENT_LOWER" ]; then
+          echo "present=$ENV_PRESENT_LOWER" >> "$GITHUB_OUTPUT"
         else
-          echo "present=${{ env.PRESENT }}" >> "$GITHUB_OUTPUT"
+          echo "present=$ENV_PRESENT_UPPER" >> "$GITHUB_OUTPUT"
         fi
