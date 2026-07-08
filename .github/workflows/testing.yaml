@@ -24,7 +24,7 @@ jobs:
     name: 'Test issue tracker detection'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read  # Checkout repository; test commits are local only
     timeout-minutes: 10
     steps:
       # Harden the runner used by this workflow
@@ -38,6 +38,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: 'Setup test commit with issue tracker'
         run: |
@@ -74,7 +75,7 @@ jobs:
     name: 'Test custom issue string'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read  # Checkout repository; test commits are local only
     timeout-minutes: 10
     steps:
       # Harden the runner used by this workflow
@@ -88,6 +89,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: 'Setup test commit with custom issue format'
         run: |
@@ -121,7 +123,7 @@ jobs:
     name: 'Test missing issue handling'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read  # Checkout repository; test commits are local only
     timeout-minutes: 10
     steps:
       # Harden the runner used by this workflow
@@ -135,6 +137,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: 'Setup test commit without issue tracker'
         run: |
@@ -169,7 +172,7 @@ jobs:
     name: 'Test error scenarios'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read  # Checkout repository; test commits are local only
     timeout-minutes: 10
     steps:
       # Harden the runner used by this workflow
@@ -183,6 +186,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: 'Setup test commit for error testing'
         run: |
