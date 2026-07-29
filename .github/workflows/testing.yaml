@@ -65,11 +65,14 @@ jobs:
 
       - name: 'Verify issue tracker was detected'
         run: |
-          if [ "${{ steps.test-detection.outputs.present }}" != "true" ]; then
+          if [ "${STEPS_TEST_DETECTION_OUTPUTS_PRESENT}" != "true" ]; then
             echo '❌ Failed to detect existing issue tracker'
             exit 1
           fi
           echo '✅ Issue tracker detection test passed'
+        env:
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_DETECTION_OUTPUTS_PRESENT: ${{ steps.test-detection.outputs.present }}
 
   test-custom-string:
     name: 'Test custom issue string'
@@ -113,11 +116,14 @@ jobs:
 
       - name: 'Verify custom string was detected'
         run: |
-          if [ "${{ steps.test-custom.outputs.present }}" != "true" ]; then
+          if [ "${STEPS_TEST_CUSTOM_OUTPUTS_PRESENT}" != "true" ]; then
             echo '❌ Failed to detect custom issue string format'
             exit 1
           fi
           echo '✅ Custom issue string test passed'
+        env:
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_CUSTOM_OUTPUTS_PRESENT: ${{ steps.test-custom.outputs.present }}
 
   test-missing-issue:
     name: 'Test missing issue handling'
@@ -162,11 +168,14 @@ jobs:
 
       - name: 'Verify missing issue was detected'
         run: |
-          if [ "${{ steps.test-missing.outputs.present }}" == 'true' ]; then
+          if [ "${STEPS_TEST_MISSING_OUTPUTS_PRESENT}" == 'true' ]; then
             echo '❌ Should not have found issue tracker'
             exit 1
           fi
           echo '✅ Missing issue detection test passed'
+        env:
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_MISSING_OUTPUTS_PRESENT: ${{ steps.test-missing.outputs.present }}
 
   test-error-handling:
     name: 'Test error scenarios'
@@ -206,11 +215,14 @@ jobs:
 
       - name: 'Verify invalid JSON was handled'
         run: |
-          if [ "${{ steps.test-invalid-json.outcome }}" == 'success' ]; then
+          if [ "${STEPS_TEST_INVALID_JSON_OUTCOME}" == 'success' ]; then
             echo '❌ Should have failed with invalid JSON'
             exit 1
           fi
           echo '✅ Invalid JSON handling test passed'
+        env:
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_INVALID_JSON_OUTCOME: ${{ steps.test-invalid-json.outcome }}
 
       - name: 'Test successful scenario for comparison'
         uses: ./
@@ -221,9 +233,11 @@ jobs:
 
       - name: 'Verify valid input works'
         run: |
-          if [ "${{ steps.test-valid.outcome }}" != 'success' ]; then
+          if [ "${STEPS_TEST_VALID_OUTCOME}" != 'success' ]; then
             echo '❌ Valid input should have succeeded'
             exit 1
           fi
           echo '✅ Valid input test passed'
           echo '✅ All error handling tests completed'
+        env:
+          STEPS_TEST_VALID_OUTCOME: ${{ steps.test-valid.outcome }}
