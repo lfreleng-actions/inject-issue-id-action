@@ -31,7 +31,7 @@ runs:
     - name: 'Get GIT commit message body'
       id: commit-message
       # yamllint disable rule:line-length
-      uses: lfreleng-actions/git-commit-message-action@4a5b845bd35d9363a8ab59824d374d1b2967666e # v0.1.1
+      uses: lfreleng-actions/git-commit-message-action@b4fcc65ba764df1646a4eb269d91913e2d267feb # v0.1.2
 
     - name: 'Check commit message for issue tracker reference'
       shell: bash
