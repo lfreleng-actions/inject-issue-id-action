@@ -53,7 +53,7 @@ jobs:
           Issue-ID: TEST-456"
 
       - name: 'Test detection of existing issue tracker'
-        uses: ./
+        uses: $/
         id: test-detection
         with:
           issue_id_lookup_json: >-
@@ -107,7 +107,7 @@ jobs:
           Ticket-ID: CUSTOM-789"
 
       - name: 'Test custom issue string detection'
-        uses: ./
+        uses: $/
         id: test-custom
         with:
           issue_id_lookup_json: '{"test": "FALLBACK-999"}'
@@ -156,7 +156,7 @@ jobs:
           This commit does not include an issue tracker reference."
 
       - name: 'Test missing issue detection (check mode)'
-        uses: ./
+        uses: $/
         id: test-missing
         with:
           issue_id_lookup_json: >-
@@ -206,7 +206,7 @@ jobs:
           git commit -m 'test: Error handling scenario'
 
       - name: 'Test with invalid JSON'
-        uses: ./
+        uses: $/
         id: test-invalid-json
         continue-on-error: true
         with:
@@ -225,7 +225,7 @@ jobs:
           STEPS_TEST_INVALID_JSON_OUTCOME: ${{ steps.test-invalid-json.outcome }}
 
       - name: 'Test successful scenario for comparison'
-        uses: ./
+        uses: $/
         id: test-valid
         with:
           issue_id_lookup_json: '{"valid": "TEST-000"}'
