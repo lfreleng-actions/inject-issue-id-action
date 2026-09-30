@@ -7,7 +7,8 @@ description: 'Action to add issue tracker reference to commit message body'
 
 inputs:
   issue_id_lookup_json:
-    description: 'JSON mapping/lookup table for issues'
+    description: >-
+      JSON array of {"key": ..., "value": ...} objects mapping actors to issues
     required: true
   issue_string:
     description: 'String to embed/inject'
@@ -24,10 +25,44 @@ outputs:
   present:
     description: 'Whether the required Issue tracker is present'
     value: ${{ steps.status.outputs.present }}
+  error:
+    # Set only when validation refuses the lookup table; empty otherwise
+    description: 'Rejection reason: invalid-json or invalid-format'
+    value: ${{ steps.validate.outputs.error }}
 
 runs:
   using: 'composite'
   steps:
+    # Runs whenever injection is enabled, not only when a lookup is needed,
+    # so a malformed table fails on first use rather than on the first
+    # commit that lacks an issue tracker reference
+    - name: 'Validate JSON lookup table'
+      id: validate
+      if: inputs.inject == 'true'
+      shell: bash
+      env:
+        INPUT_ISSUE_ID_LOOKUP_JSON: ${{ inputs.issue_id_lookup_json }}
+      run: |
+        # Validate JSON lookup table
+        # json-key-value-lookup-action expects [{"key": ..., "value": ...}]
+        # jq accepts input holding no JSON value, so test for blanks first
+        if [ -z "${INPUT_ISSUE_ID_LOOKUP_JSON//[[:space:]]/}" ] || \
+          ! jq empty >/dev/null 2>&1 <<< "$INPUT_ISSUE_ID_LOOKUP_JSON"; then
+          echo 'error=invalid-json' >> "$GITHUB_OUTPUT"
+          echo 'Error: issue_id_lookup_json is blank or not valid JSON ❌'
+          exit 1
+        fi
+        # Slurp so that a stream of several JSON values is also refused
+        if ! jq -s -e 'length == 1 and (.[0] | type == "array"
+            and all(.[]; type == "object" and has("key") and has("value")))' \
+            >/dev/null 2>&1 <<< "$INPUT_ISSUE_ID_LOOKUP_JSON"; then
+          echo 'error=invalid-format' >> "$GITHUB_OUTPUT"
+          echo 'Error: issue_id_lookup_json must be an array of' \
+            '{"key": ..., "value": ...} objects ❌'
+          exit 1
+        fi
+        echo 'JSON lookup table is valid ✅'
+
     - name: 'Get GIT commit message body'
       id: commit-message
       # yamllint disable rule:line-length
