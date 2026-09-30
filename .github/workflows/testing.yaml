@@ -57,10 +57,10 @@ jobs:
         id: test-detection
         with:
           issue_id_lookup_json: >-
-            {
-              "${{ github.actor }}": "FALLBACK-001",
-              "dependabot[bot]": "MAINT-001"
-            }
+            [
+              {"key": "${{ github.actor }}", "value": "FALLBACK-001"},
+              {"key": "dependabot[bot]", "value": "MAINT-001"}
+            ]
           inject: false
 
       - name: 'Verify issue tracker was detected'
@@ -110,7 +110,7 @@ jobs:
         uses: $/
         id: test-custom
         with:
-          issue_id_lookup_json: '{"test": "FALLBACK-999"}'
+          issue_id_lookup_json: '[{"key": "test", "value": "FALLBACK-999"}]'
           issue_string: 'Ticket-ID:'
           inject: false
 
@@ -160,10 +160,10 @@ jobs:
         id: test-missing
         with:
           issue_id_lookup_json: >-
-            {
-              "${{ github.actor }}": "FOUND-123",
-              "test-user": "TEST-456"
-            }
+            [
+              {"key": "${{ github.actor }}", "value": "FOUND-123"},
+              {"key": "test-user", "value": "TEST-456"}
+            ]
           inject: false
 
       - name: 'Verify missing issue was detected'
@@ -197,13 +197,18 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # The commit carries an issue tracker reference, so a lookup table
+      # that passes validation never reaches the lookup or the push; each
+      # rejection below can only come from the validation step
       - name: 'Setup test commit for error testing'
         run: |
           git config user.name 'GitHub Actions Test'
           git config user.email 'actions@github.com'
           echo '# Error Test' > test-error.md
           git add test-error.md
-          git commit -m 'test: Error handling scenario'
+          git commit -m "test: Error handling scenario
+
+          Issue-ID: TEST-000"
 
       - name: 'Test with invalid JSON'
         uses: $/
@@ -213,31 +218,125 @@ jobs:
           issue_id_lookup_json: 'invalid json format here'
           inject: true
 
-      - name: 'Verify invalid JSON was handled'
+      - name: 'Verify invalid JSON was rejected'
         run: |
           if [ "${STEPS_TEST_INVALID_JSON_OUTCOME}" == 'success' ]; then
             echo '❌ Should have failed with invalid JSON'
+            exit 1
+          fi
+          if [ "${STEPS_TEST_INVALID_JSON_ERROR}" != 'invalid-json' ]; then
+            echo "❌ Wrong error: '${STEPS_TEST_INVALID_JSON_ERROR}'"
             exit 1
           fi
           echo '✅ Invalid JSON handling test passed'
         env:
           # yamllint disable-line rule:line-length
           STEPS_TEST_INVALID_JSON_OUTCOME: ${{ steps.test-invalid-json.outcome }}
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_INVALID_JSON_ERROR: ${{ steps.test-invalid-json.outputs.error }}
+
+      # Valid JSON, but the object form json-key-value-lookup-action cannot
+      # read; this README formerly documented it
+      - name: 'Test with a JSON object instead of an array'
+        uses: $/
+        id: test-object-json
+        continue-on-error: true
+        with:
+          issue_id_lookup_json: '{"valid": "TEST-000"}'
+          inject: true
+
+      - name: 'Verify JSON object was rejected'
+        run: |
+          if [ "${STEPS_TEST_OBJECT_JSON_OUTCOME}" == 'success' ]; then
+            echo '❌ Should have failed with a JSON object'
+            exit 1
+          fi
+          if [ "${STEPS_TEST_OBJECT_JSON_ERROR}" != 'invalid-format' ]; then
+            echo "❌ Wrong error: '${STEPS_TEST_OBJECT_JSON_ERROR}'"
+            exit 1
+          fi
+          echo '✅ JSON object handling test passed'
+        env:
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_OBJECT_JSON_OUTCOME: ${{ steps.test-object-json.outcome }}
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_OBJECT_JSON_ERROR: ${{ steps.test-object-json.outputs.error }}
+
+      - name: 'Test with an array element missing its value'
+        uses: $/
+        id: test-missing-value
+        continue-on-error: true
+        with:
+          issue_id_lookup_json: '[{"key": "valid"}]'
+          inject: true
+
+      - name: 'Verify incomplete array element was rejected'
+        run: |
+          if [ "${STEPS_TEST_MISSING_VALUE_OUTCOME}" == 'success' ]; then
+            echo '❌ Should have failed with an element missing its value'
+            exit 1
+          fi
+          if [ "${STEPS_TEST_MISSING_VALUE_ERROR}" != 'invalid-format' ]; then
+            echo "❌ Wrong error: '${STEPS_TEST_MISSING_VALUE_ERROR}'"
+            exit 1
+          fi
+          echo '✅ Incomplete array element test passed'
+        env:
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_MISSING_VALUE_OUTCOME: ${{ steps.test-missing-value.outcome }}
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_MISSING_VALUE_ERROR: ${{ steps.test-missing-value.outputs.error }}
+
+      - name: 'Test with whitespace-only input'
+        uses: $/
+        id: test-blank-json
+        continue-on-error: true
+        with:
+          issue_id_lookup_json: '   '
+          inject: true
+
+      - name: 'Verify whitespace-only input was rejected'
+        run: |
+          if [ "${STEPS_TEST_BLANK_JSON_OUTCOME}" == 'success' ]; then
+            echo '❌ Should have failed with whitespace-only input'
+            exit 1
+          fi
+          if [ "${STEPS_TEST_BLANK_JSON_ERROR}" != 'invalid-json' ]; then
+            echo "❌ Wrong error: '${STEPS_TEST_BLANK_JSON_ERROR}'"
+            exit 1
+          fi
+          echo '✅ Whitespace-only input test passed'
+        env:
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_BLANK_JSON_OUTCOME: ${{ steps.test-blank-json.outcome }}
+          # yamllint disable-line rule:line-length
+          STEPS_TEST_BLANK_JSON_ERROR: ${{ steps.test-blank-json.outputs.error }}
 
       - name: 'Test successful scenario for comparison'
         uses: $/
         id: test-valid
+        continue-on-error: true
         with:
-          issue_id_lookup_json: '{"valid": "TEST-000"}'
-          inject: false
+          issue_id_lookup_json: '[{"key": "valid", "value": "TEST-000"}]'
+          inject: true
 
       - name: 'Verify valid input works'
         run: |
           if [ "${STEPS_TEST_VALID_OUTCOME}" != 'success' ]; then
-            echo '❌ Valid input should have succeeded'
+            echo "❌ Valid input failed: '${STEPS_TEST_VALID_ERROR}'"
+            exit 1
+          fi
+          if [ -n "${STEPS_TEST_VALID_ERROR}" ]; then
+            echo "❌ Unexpected error: '${STEPS_TEST_VALID_ERROR}'"
+            exit 1
+          fi
+          if [ "${STEPS_TEST_VALID_PRESENT}" != 'true' ]; then
+            echo '❌ Failed to detect existing issue tracker'
             exit 1
           fi
           echo '✅ Valid input test passed'
           echo '✅ All error handling tests completed'
         env:
           STEPS_TEST_VALID_OUTCOME: ${{ steps.test-valid.outcome }}
+          STEPS_TEST_VALID_ERROR: ${{ steps.test-valid.outputs.error }}
+          STEPS_TEST_VALID_PRESENT: ${{ steps.test-valid.outputs.present }}

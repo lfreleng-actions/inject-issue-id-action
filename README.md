@@ -13,7 +13,20 @@ Action to add an issue tracker reference to the body of a commit message.
 
 Pass a JSON key/value lookup table to the action, either directly as a string,
 or by passing in the contents of a variable (set either at the repository or
-organisation level).
+organisation level). The table is an array of objects, each with a `key` (the
+GitHub actor) and a `value` (the issue ID to inject for that actor):
+
+```json
+[
+  { "key": "octocat", "value": "PROJ-123" },
+  { "key": "dependabot[bot]", "value": "PROJ-456" }
+]
+```
+
+This is the format
+[json-key-value-lookup-action](https://github.com/lfreleng-actions/json-key-value-lookup-action)
+reads. When `inject` is true, the action validates the table before
+anything else runs, and fails on invalid JSON or any other shape.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -40,19 +53,24 @@ with default values.
 
 <!-- markdownlint-disable MD013 -->
 
-| Variable Name        | Required | Default     | Description                           |
-| -------------------- | -------- | ----------- | ------------------------------------- |
-| issue_id_lookup_json | True     | N/A         | JSON object of key/value pairs        |
-| issue_string         | False    | "Issue-ID:" | Fixed preamble/string to embed/inject |
-| inject               | False    | True        | When set false, checks for presence   |
+| Variable Name        | Required | Default     | Description                                        |
+| -------------------- | -------- | ----------- | -------------------------------------------------- |
+| issue_id_lookup_json | True     | N/A         | JSON array of `{"key": ..., "value": ...}` objects |
+| issue_string         | False    | "Issue-ID:" | Fixed preamble/string to embed/inject              |
+| inject               | False    | True        | When set false, checks for presence                |
 
 <!-- markdownlint-enable MD013 -->
 
 ## Outputs
 
-| Variable Name | Description                                   |
-| ------------- | --------------------------------------------- |
-| present       | Set true when ticket string found or injected |
+<!-- markdownlint-disable MD013 -->
+
+| Variable Name | Description                                                          |
+| ------------- | -------------------------------------------------------------------- |
+| present       | Set true when ticket string found or injected                        |
+| error         | `invalid-json` or `invalid-format` when validation rejects the table |
+
+<!-- markdownlint-enable MD013 -->
 
 ## Limitations
 
