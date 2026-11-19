@@ -108,7 +108,7 @@ runs:
     - name: 'Get ticket from JSON lookup table'
       id: lookup
       if: env.PRESENT == 'false' && inputs.inject == 'true'
-      uses: lfreleng-actions/json-key-value-lookup-action@dc60e1bf50e7d2ab1034cd53edae18126f7f61d6  # v0.1.4
+      uses: lfreleng-actions/json-key-value-lookup-action@0d80776a6cc0c292dff20f380b716500229059c5  # v0.1.5
       with:
         json: ${{ inputs.issue_id_lookup_json }}
         key: ${{ steps.set-key.outputs.key }}
